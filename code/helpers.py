@@ -175,18 +175,18 @@ def process_testing_capture_correlation_ROAD(testing_capture_name, ground_truth_
 
     corr_matrices_testing, timepts = compute_correlation_distribution_testing(testing_capture_name, ground_truth_dbc_path, freq, window, offset)
     total_length = timepts[-1]
-    print("corr_matrices_testing: ", len(corr_matrices_testing))
+    # print("corr_matrices_testing: ", len(corr_matrices_testing))
 
     intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
     # print(intervals_testing[0:10])
-    print("interval_testing: ", len(intervals_testing))
+    # print("interval_testing: ", len(intervals_testing))
 
     tp, fp, fn, tn = 0, 0, 0, 0
 
     ground_truth = []
     predict_proba = []
 
-    for index_interval in tqdm(range(len(intervals_testing))):
+    for index_interval in range(len(intervals_testing)):
         
         # # Compute signal names intersection
         # signals_testing = corr_matrices_testing[index_interval].columns.values

@@ -1,8 +1,12 @@
 from helpers import *
 import numpy as np
 from collections import defaultdict
+import json
+from tqdm import tqdm
 
 def main():
+
+    # print(os.getcwd())
 
     # print("Hola")
     training_captures, testing_captures = get_captures_names()
@@ -28,26 +32,31 @@ def main():
 
     ############################################
 
-    window = 50
-    offset = 1
+    # window = 50
+    # offset = 1
 
+    resulting_dic = defaultdict(dict)
 
-    for window in np.arange(50, 550, 50):
+    for window in tqdm(np.arange(50, 550, 50)):
         for offset in np.arange(10, window + 10, 10):
-            print(window, offset)
 
-    # ground_truth, predict_proba = process_testing_capture_correlation_ROAD(testing_captures[0], ground_truth_dbc_path, freq=100, window=window, 
-    #                                                     offset=offset, corr_sample_training=corr_sample_training, injection_interval=injection_interval)
+    # for window in tqdm(np.arange(50, 150, 50)):
+    #     for offset in np.arange(10, window + 10, 10):
+            # print(window, offset)
+
+            ground_truth, predict_proba = process_testing_capture_correlation_ROAD(testing_captures[0], ground_truth_dbc_path, freq=100, window=window, 
+                                                        offset=offset, corr_sample_training=corr_sample_training, injection_interval=injection_interval)
     
-    # resulting_dic = defaultdict(dict)
-    
-    # resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
-    # resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+            resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+            resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
 
     # print(ground_truth) 
     # print(predict_proba)
 
     # print(dict(resulting_dic))
+
+    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_captures[0][12:-14]}_distribution_ROAD.json", "w") as outfile:
+        json.dump(resulting_dic, outfile)
 
     
 
