@@ -3,9 +3,16 @@ import numpy as np
 from collections import defaultdict
 import json
 from tqdm import tqdm
+from multiprocessing import Process
+import sys
 
 def main():
 
+    method = sys.argv[1]
+    dataset = sys.argv[2]
+
+    # print(method) 
+    # print(dataset)
     # print(os.getcwd())
 
     # print("Hola")
@@ -22,9 +29,9 @@ def main():
     # print(np.diff(timepts))
 
     corr_sample_training, signals_training = compute_correlation_distribution_training(training_captures[-1], ground_truth_dbc_path, freq=100)
-    # print(testing_captures[0])
+    # print(testing_captures[2])
     # print(testing_captures[0][12:-14])
-    injection_interval = attack_metadata[testing_captures[0][12:-14]]["injection_interval"]
+    
     # print(injection_interval)
     
     #print(len(corr_sample_training))
@@ -32,31 +39,48 @@ def main():
 
     ############################################
 
-    # window = 50
-    # offset = 1
+    # window = 450
+    # offset = 10
 
-    resulting_dic = defaultdict(dict)
+    # resulting_dic = defaultdict(dict)
+    # injection_interval = attack_metadata[testing_captures[2][12:-14]]["injection_interval"]
+    # freq = 100
 
-    for window in tqdm(np.arange(50, 550, 50)):
-        for offset in np.arange(10, window + 10, 10):
-
-    # for window in tqdm(np.arange(50, 150, 50)):
+    # for window in tqdm(np.arange(50, 550, 50)):
     #     for offset in np.arange(10, window + 10, 10):
-            # print(window, offset)
 
-            ground_truth, predict_proba = process_testing_capture_correlation_ROAD(testing_captures[0], ground_truth_dbc_path, freq=100, window=window, 
-                                                        offset=offset, corr_sample_training=corr_sample_training, injection_interval=injection_interval)
+    #         print(window, offset)
+
+    #         ground_truth, predict_proba = process_testing_capture_correlation_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, 
+    #                                                     offset, corr_sample_training, injection_interval)
     
-            resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
-            resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+    #         resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+    #         resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
 
-    # print(ground_truth) 
-    # print(predict_proba)
+    # # print(ground_truth) 
+    # # print(predict_proba)
 
     # print(dict(resulting_dic))
 
-    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_captures[0][12:-14]}_distribution_ROAD.json", "w") as outfile:
-        json.dump(resulting_dic, outfile)
+    # with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_captures[0][12:-14]}_distribution_ROAD.json", "w") as outfile:
+    #     json.dump(resulting_dic, outfile)
+
+    ###
+
+    jobs = []
+    freq = 100
+
+    for testing_capture in testing_captures:
+
+        p = Process(target=process_testing_captures_parallel_distribution_ROAD, args=(testing_capture, ground_truth_dbc_path, 
+                                                                                     attack_metadata, freq, corr_sample_training, method, dataset))
+        
+        jobs.append(p)
+        p.start()
+
+    # Wait for this [thread/process] to complete
+    for proc in jobs:
+        proc.join()
 
     
 

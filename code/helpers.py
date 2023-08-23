@@ -6,6 +6,12 @@ from IPython.display import display
 import numpy as np
 from tqdm import tqdm
 from scipy.stats import mannwhitneyu
+from scipy.stats.mstats import spearmanr
+from collections import defaultdict
+from sklearn.cluster import DBSCAN
+from scipy.stats import norm
+
+
 
 sys.path.insert(0, "/home/cloud/Projects/CAN/detect/") # add detect folder to path so that files from this folder can be imported
 import signal_based_preprocess_functions
@@ -136,6 +142,26 @@ def compute_correlation_distribution_training(training_capture_name, ground_trut
 
 
 
+def compute_correlation_training(training_capture_name, ground_truth_dbc_path, freq):
+
+    signal_multivar_ts, timepts, aid_signal_tups = from_capture_to_time_series(training_capture_name, ground_truth_dbc_path, freq)
+
+    window = signal_multivar_ts.shape[0]
+    offset = window
+    partition_training = process_multivariate_signals(signal_multivar_ts, aid_signal_tups, window, offset)
+
+    # print(len(partition_training))
+    # display(partition_training[0])
+
+    corr_matrices_training = compute_correlation_matrices(partition_training)
+    signals_training = corr_matrices_training[0].columns.values
+
+    # corr_sample_training = np.concatenate([upper(corr_matrices_training[i]) for i in range(len(corr_matrices_training))])
+
+    return(corr_matrices_training, signals_training)
+
+
+
 def compute_correlation_distribution_testing(testing_capture_name, ground_truth_dbc_path, freq, window, offset):
 
     signal_multivar_ts, timepts, aid_signal_tups = from_capture_to_time_series(testing_capture_name, ground_truth_dbc_path, freq)
@@ -170,7 +196,7 @@ def create_time_intervals(total_length, window, offset):
 
 
 
-def process_testing_capture_correlation_ROAD(testing_capture_name, ground_truth_dbc_path, freq, window, 
+def process_testing_capture_distribution_ROAD(testing_capture_name, ground_truth_dbc_path, freq, window, 
                                              offset, corr_sample_training, injection_interval):
 
     corr_matrices_testing, timepts = compute_correlation_distribution_testing(testing_capture_name, ground_truth_dbc_path, freq, window, offset)
@@ -216,6 +242,258 @@ def process_testing_capture_correlation_ROAD(testing_capture_name, ground_truth_
 
     return ground_truth, predict_proba
 
+
+    
+def process_testing_captures_parallel_distribution_ROAD(testing_capture, ground_truth_dbc_path, attack_metadata, freq,
+                                      corr_sample_training, method, dataset):
+    
+    print("computing: ", testing_capture)
+    
+    # dict to store computations
+    resulting_dic = defaultdict(dict)
+
+    # extract injection intervals
+    injection_interval = attack_metadata[testing_capture[12:-14]]["injection_interval"]
+
+    # Windowing datasets
+    for window in tqdm(np.arange(50, 450, 50)):
+        for offset in np.arange(10, window + 10, 10):
+
+            ground_truth, predict_proba = process_testing_capture_distribution_ROAD(testing_capture, ground_truth_dbc_path, freq, window, 
+                                                        offset, corr_sample_training, injection_interval)
+    
+            resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+            resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+
+    # Storing the file
+    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+        json.dump(resulting_dic, outfile)
+
+
+
+def process_testing_capture_correlation_ROAD(testing_capture_name, ground_truth_dbc_path, freq, window, 
+                                             offset, corr_matrices_training, signals_training, injection_interval):
+
+    corr_matrices_testing, timepts = compute_correlation_distribution_testing(testing_capture_name, ground_truth_dbc_path, freq, window, offset)
+    total_length = timepts[-1]
+    # print("corr_matrices_testing: ", len(corr_matrices_testing))
+
+    intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
+    # print(intervals_testing[0:10])
+    # print("interval_testing: ", len(intervals_testing))
+
+    tp, fp, fn, tn = 0, 0, 0, 0
+
+    ground_truth = []
+    predict_proba = []
+
+    for index_interval in range(len(intervals_testing)):
         
+        # Compute signal names intersection
+        signals_testing = corr_matrices_testing[index_interval].columns.values
+        signal_names_intersection = list(set(signals_training).intersection(set(signals_testing)))
+
+        # Filter correlation matrices by common names
+        corr_matrix_1 = corr_matrices_training[0].loc[signal_names_intersection, signal_names_intersection]
+        corr_matrix_2 = corr_matrices_testing[index_interval].loc[signal_names_intersection, signal_names_intersection]
+
+        try:
+        # Do hypothesis test
+        # spearman_test = spearmanr(upper(corr_matrix_1), upper(corr_matrix_2))[1]
+            spearman_test = spearmanr(upper(corr_matrix_1), upper(corr_matrix_2)).pvalue
+            # print((i, corr_matrix_1.shape[0], spearman_test[0], spearman_test[1]))
+
+        except:
+            # print("Problem with Spearman")
+            # print(upper(corr_matrix_1))
+            # print(upper(corr_matrix_2))
+
+            # Evaluation criteria
+            if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+                or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                    or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+                ground_truth.append(1)
+                predict_proba.append(0)
+            else:
+                ground_truth.append(0)
+                predict_proba.append(0)
+
+        else:
+
+            # Evaluation criteria
+            if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+                or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                    or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+                ground_truth.append(1)
+                predict_proba.append(spearman_test)
+            else:
+                ground_truth.append(0)
+                predict_proba.append(spearman_test)
+
+    return ground_truth, predict_proba
 
 
+
+def process_testing_captures_parallel_correlation_ROAD(testing_capture, ground_truth_dbc_path, attack_metadata, freq,
+                                      corr_matrices_training, signals_training, method, dataset):
+    
+    print("computing: ", testing_capture)
+    
+    # dict to store computations
+    resulting_dic = defaultdict(dict)
+
+    # extract injection intervals
+    injection_interval = attack_metadata[testing_capture[12:-14]]["injection_interval"]
+
+    # Windowing datasets
+    for window in tqdm(np.arange(50, 450, 50)):
+        for offset in np.arange(10, window + 10, 10):
+
+            ground_truth, predict_proba = process_testing_capture_correlation_ROAD(testing_capture, ground_truth_dbc_path, freq, window, 
+                                                        offset, corr_matrices_training, signals_training, injection_interval)
+    
+            resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+            resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+
+    # Storing the file
+    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+        json.dump(resulting_dic, outfile)
+
+
+
+def compute_distance_matrix(corr_matrix):
+
+    signal_names = np.array(corr_matrix.columns)
+
+    # display(corr_matrix)
+
+    # compute distance matrix
+    # distance_matrix = np.sqrt(2*(1 - corr_matrix.to_numpy())) 
+    distance_matrix = 2*(1 - corr_matrix.to_numpy())
+    distance_matrix[distance_matrix < 0] = 0
+    # display(distance_matrix.shape)
+    # display(distance_matrix)
+
+    return signal_names, distance_matrix
+
+
+
+def process_testing_capture_DBSCAN_ROAD(testing_capture_name, ground_truth_dbc_path, freq, window, offset, injection_interval):
+    
+    # print("Hola")
+
+    # DBSCAN Object
+    DBSCAN_clustering = DBSCAN(eps=1, min_samples=1, metric="precomputed")
+
+    corr_matrices_testing, timepts = compute_correlation_distribution_testing(testing_capture_name, ground_truth_dbc_path, freq, window, offset)
+    total_length = timepts[-1]
+    # print("corr_matrices_testing: ", len(corr_matrices_testing))
+
+    intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
+    # print(intervals_testing[0:10])
+    # print("interval_testing: ", len(intervals_testing))
+
+    tp, fp, fn, tn = 0, 0, 0, 0
+
+    ground_truth = []
+    predict_proba = [] 
+
+    for index_interval in range(len(intervals_testing)):
+
+        # print("Interval: ", intervals_testing[index_interval])
+
+        # print(np.isnan(corr_matrices_testing[index_interval]).any().any())
+        # print((corr_matrices_testing[index_interval] < 0).any().any())
+
+        # print(corr_matrices_testing[index_interval].shape)
+        signal_names, distance_matrix = compute_distance_matrix(corr_matrices_testing[index_interval])
+        # print(np.isnan(distance_matrix).any().any())
+        # print((distance_matrix < 0))
+        # display(distance_matrix[distance_matrix < 0])
+        # print(type(signal_names), signal_names)
+        
+        DBSCAN_clustering.fit(distance_matrix)
+
+        clustering_labels = DBSCAN_clustering.labels_
+        
+        unique_clustering_labels = np.unique(clustering_labels)
+
+        # print(len(clustering_labels), len(unique_clustering_labels), clustering_labels)
+
+        max_error_all_clusters = []
+
+        for cluster_id in (unique_clustering_labels):
+            
+            index_of_interest = np.argwhere(clustering_labels == cluster_id).flatten()
+            # print(cluster_id, len(index_of_interest), index_of_interest)
+            # print(signal_names[index_of_interest])
+            
+            if len(index_of_interest) >= 2: # Check only clusters with at least two elements
+
+                pd_corr_matrix = pd.DataFrame(corr_matrices_testing[index_interval], index=signal_names, columns=signal_names)
+                # display(pd_distance_matrix)
+                matrix_of_interest = pd_corr_matrix.loc[signal_names[index_of_interest], signal_names[index_of_interest]]
+                # display(matrix_of_interest)
+
+                upper_matrix_of_interest = upper(matrix_of_interest)
+                # display(upper_matrix_of_interest)
+
+                mean_cluster = np.mean(upper_matrix_of_interest)
+                std_cluster = np.std(upper_matrix_of_interest)
+                # print(std_cluster)
+
+                if std_cluster != 0:
+
+                    error_cluster = np.absolute(upper_matrix_of_interest - mean_cluster)
+                    error_cluster = error_cluster/std_cluster
+                    max_error_cluster = np.max(error_cluster)
+                    
+                    max_error_all_clusters.append(max_error_cluster)
+
+                # break
+
+        mean_max_error_all_clusters = np.mean(max_error_all_clusters)
+        std_max_error_all_clusters = np.std(max_error_all_clusters)
+        detect_probability = norm.cdf(mean_max_error_all_clusters)
+        
+        # print("mean: ", mean_max_error_all_clusters, "std: ", std_max_error_all_clusters, "dist: ", max_error_all_clusters)
+        
+        # break
+
+        if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+            or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+            ground_truth.append(1)
+            predict_proba.append(detect_probability)
+        else:
+            ground_truth.append(0)
+            predict_proba.append(detect_probability)
+
+
+    return ground_truth, predict_proba
+
+
+
+
+def process_testing_captures_parallel_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, attack_metadata, freq, method, dataset):
+
+    print("computing: ", testing_capture)
+    
+    # dict to store computations
+    resulting_dic = defaultdict(dict)
+
+    # extract injection intervals
+    injection_interval = attack_metadata[testing_capture[12:-14]]["injection_interval"]
+
+    # Windowing datasets
+    for window in tqdm(np.arange(50, 450, 50)):
+        for offset in np.arange(10, window + 10, 10):
+
+            ground_truth, predict_proba = process_testing_capture_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
+    
+            resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+            resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+
+    # Storing the file
+    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+        json.dump(resulting_dic, outfile)

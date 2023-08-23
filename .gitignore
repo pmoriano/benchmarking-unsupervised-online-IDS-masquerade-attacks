@@ -1,0 +1,9 @@
+# ignore data/
+data-*
+
+
+# images
+*.pdf
+*.eps
+
+
