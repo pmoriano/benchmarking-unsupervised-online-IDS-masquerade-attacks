@@ -43,7 +43,9 @@ def main():
     # offset = 10
 
     # resulting_dic = defaultdict(dict)
-    # injection_interval = attack_metadata[testing_captures[2][12:-14]]["injection_interval"]
+    # testing_capture = testing_captures[8]
+    # print(testing_capture)
+    # injection_interval = attack_metadata[testing_capture[12:-14]]["injection_interval"]
     # freq = 100
 
     # for window in tqdm(np.arange(50, 450, 50)):
@@ -51,7 +53,7 @@ def main():
 
     #         print(f"window:{window}, offset:{offset}")
 
-    #         ground_truth, predict_proba = process_testing_capture_DBSCAN_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, offset, injection_interval)
+    #         ground_truth, predict_proba = process_testing_capture_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
     
     #         resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
     #         resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba

@@ -10,6 +10,9 @@ from scipy.stats.mstats import spearmanr
 from collections import defaultdict
 from sklearn.cluster import DBSCAN
 from scipy.stats import norm
+from scipy.cluster.hierarchy import single, complete, average, ward, dendrogram, linkage, fcluster
+from clusim.clustering import Clustering, remap2match
+import clusim.sim as sim
 
 
 
@@ -207,8 +210,6 @@ def process_testing_capture_distribution_ROAD(testing_capture_name, ground_truth
     # print(intervals_testing[0:10])
     # print("interval_testing: ", len(intervals_testing))
 
-    tp, fp, fn, tn = 0, 0, 0, 0
-
     ground_truth = []
     predict_proba = []
 
@@ -281,8 +282,6 @@ def process_testing_capture_correlation_ROAD(testing_capture_name, ground_truth_
     intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
     # print(intervals_testing[0:10])
     # print("interval_testing: ", len(intervals_testing))
-
-    tp, fp, fn, tn = 0, 0, 0, 0
 
     ground_truth = []
     predict_proba = []
@@ -393,8 +392,6 @@ def process_testing_capture_DBSCAN_ROAD(testing_capture_name, ground_truth_dbc_p
     # print(intervals_testing[0:10])
     # print("interval_testing: ", len(intervals_testing))
 
-    tp, fp, fn, tn = 0, 0, 0, 0
-
     ground_truth = []
     predict_proba = [] 
 
@@ -405,69 +402,89 @@ def process_testing_capture_DBSCAN_ROAD(testing_capture_name, ground_truth_dbc_p
         # print(np.isnan(corr_matrices_testing[index_interval]).any().any())
         # print((corr_matrices_testing[index_interval] < 0).any().any())
 
-        # print(corr_matrices_testing[index_interval].shape)
-        signal_names, distance_matrix = compute_distance_matrix(corr_matrices_testing[index_interval])
-        # print(np.isnan(distance_matrix).any().any())
-        # print((distance_matrix < 0))
-        # display(distance_matrix[distance_matrix < 0])
-        # print(type(signal_names), signal_names)
-        
-        DBSCAN_clustering.fit(distance_matrix)
+        # print(corr_matrices_testing[index_interval].shape)#, corr_matrices_testing[index_interval])
+        # print(corr_matrices_testing[index_interval].any())
 
-        clustering_labels = DBSCAN_clustering.labels_
-        
-        unique_clustering_labels = np.unique(clustering_labels)
+        # Check if there are elements in the correlation matrix
+        if corr_matrices_testing[index_interval].shape != (0, 0):
 
-        # print(len(clustering_labels), len(unique_clustering_labels), clustering_labels)
-
-        max_error_all_clusters = []
-
-        for cluster_id in (unique_clustering_labels):
+            signal_names, distance_matrix = compute_distance_matrix(corr_matrices_testing[index_interval])
+            # print(np.isnan(distance_matrix).any().any())
+            # print((distance_matrix < 0))
+            # display(distance_matrix[distance_matrix < 0])
+            # print(type(signal_names), signal_names)
             
-            index_of_interest = np.argwhere(clustering_labels == cluster_id).flatten()
-            # print(cluster_id, len(index_of_interest), index_of_interest)
-            # print(signal_names[index_of_interest])
+            # print(distance_matrix)
+            DBSCAN_clustering.fit(distance_matrix)
+
+            clustering_labels = DBSCAN_clustering.labels_
             
-            if len(index_of_interest) >= 2: # Check only clusters with at least two elements
+            unique_clustering_labels = np.unique(clustering_labels)
 
-                pd_corr_matrix = pd.DataFrame(corr_matrices_testing[index_interval], index=signal_names, columns=signal_names)
-                # display(pd_distance_matrix)
-                matrix_of_interest = pd_corr_matrix.loc[signal_names[index_of_interest], signal_names[index_of_interest]]
-                # display(matrix_of_interest)
+            # print(len(clustering_labels), len(unique_clustering_labels), clustering_labels)
 
-                upper_matrix_of_interest = upper(matrix_of_interest)
-                # display(upper_matrix_of_interest)
+            max_error_all_clusters = []
 
-                mean_cluster = np.mean(upper_matrix_of_interest)
-                std_cluster = np.std(upper_matrix_of_interest)
-                # print(std_cluster)
+            for cluster_id in (unique_clustering_labels):
+                
+                index_of_interest = np.argwhere(clustering_labels == cluster_id).flatten()
+                # print(cluster_id, len(index_of_interest), index_of_interest)
+                # print(signal_names[index_of_interest])
+                
+                if len(index_of_interest) >= 2: # Check only clusters with at least two elements
 
-                if std_cluster != 0:
+                    pd_corr_matrix = pd.DataFrame(corr_matrices_testing[index_interval], index=signal_names, columns=signal_names)
+                    # display(pd_distance_matrix)
+                    matrix_of_interest = pd_corr_matrix.loc[signal_names[index_of_interest], signal_names[index_of_interest]]
+                    # display(matrix_of_interest)
 
-                    error_cluster = np.absolute(upper_matrix_of_interest - mean_cluster)
-                    error_cluster = error_cluster/std_cluster
-                    max_error_cluster = np.max(error_cluster)
-                    
-                    max_error_all_clusters.append(max_error_cluster)
+                    upper_matrix_of_interest = upper(matrix_of_interest)
+                    # display(upper_matrix_of_interest)
 
-                # break
+                    mean_cluster = np.mean(upper_matrix_of_interest)
+                    std_cluster = np.std(upper_matrix_of_interest)
+                    # print(std_cluster)
 
-        mean_max_error_all_clusters = np.mean(max_error_all_clusters)
-        std_max_error_all_clusters = np.std(max_error_all_clusters)
-        detect_probability = norm.cdf(mean_max_error_all_clusters)
-        
-        # print("mean: ", mean_max_error_all_clusters, "std: ", std_max_error_all_clusters, "dist: ", max_error_all_clusters)
-        
-        # break
+                    if std_cluster != 0:
 
-        if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
-            or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
-                or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
-            ground_truth.append(1)
-            predict_proba.append(detect_probability)
+                        error_cluster = np.absolute(upper_matrix_of_interest - mean_cluster)
+                        error_cluster = error_cluster/std_cluster
+                        max_error_cluster = np.max(error_cluster)
+                        
+                        max_error_all_clusters.append(max_error_cluster)
+
+                    # break
+
+            if len(max_error_all_clusters) != 0:
+                mean_max_error_all_clusters = np.mean(max_error_all_clusters)
+                std_max_error_all_clusters = np.std(max_error_all_clusters)
+                detect_probability = norm.cdf(mean_max_error_all_clusters)
+
+                # print("mean: ", mean_max_error_all_clusters, "std: ", std_max_error_all_clusters, "dist: ", max_error_all_clusters)
+            else:
+                detect_probability = 0 
+            
+            # break
+
+            if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+                or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                    or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+                ground_truth.append(1)
+                predict_proba.append(detect_probability)
+            else:
+                ground_truth.append(0)
+                predict_proba.append(detect_probability)
+
+        # Assign probability of detection 0 when there is an empty slice
         else:
-            ground_truth.append(0)
-            predict_proba.append(detect_probability)
+            if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+                or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                    or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+                ground_truth.append(1)
+                predict_proba.append(0)
+            else:
+                ground_truth.append(0)
+                predict_proba.append(0)
 
 
     return ground_truth, predict_proba
@@ -490,6 +507,139 @@ def process_testing_captures_parallel_DBSCAN_ROAD(testing_capture, ground_truth_
         for offset in np.arange(10, window + 10, 10):
 
             ground_truth, predict_proba = process_testing_capture_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
+    
+            resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+            resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+
+    # Storing the file
+    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+        json.dump(resulting_dic, outfile)
+
+
+def hierarchical_clustering(corr_matrix, method="complete"):
+    
+    if method == "complete":
+        Z = complete(corr_matrix)
+    if method == "single":
+        Z = single(corr_matrix)
+    if method == "average":
+        Z = average(corr_matrix)
+    if method == "ward":
+        Z = ward(corr_matrix)
+  
+    # PLotting the dendrogram
+    # fig = plt.figure(figsize=(16, 8))
+    # dn = dendrogram(Z)
+    # plt.title(f"Dendrogram for {method}-linkage with correlation distance")
+    # plt.show()
+    
+    return Z
+
+
+def compute_hierarchical_clustering(corr_matrix_1, corr_matrix_2, signal_names_intersection, method):
+    
+    # Filter correlation matrices by common names
+    corr_matrix_1 = corr_matrix_1.loc[signal_names_intersection, signal_names_intersection]
+    # display(corr_matrix_1)
+
+    corr_matrix_2 = corr_matrix_2.loc[signal_names_intersection, signal_names_intersection]
+    # display(corr_matrix_2)
+    
+    linkage_matrix_1 = hierarchical_clustering(corr_matrix_1, method=method)
+    linkage_matrix_2 = hierarchical_clustering(corr_matrix_2, method=method)
+    
+    return linkage_matrix_1, linkage_matrix_2
+
+
+
+def compute_element_centric_similarity(linkage_matrix_1, linkage_matrix_2, r=1.0):
+    
+    c_1 = Clustering().from_scipy_linkage(linkage_matrix_1, dist_rescaled=True)
+    c_2 = Clustering().from_scipy_linkage(linkage_matrix_2, dist_rescaled=True)
+    
+    return sim.element_sim(c_1, c_2, r=r, alpha=0.9)
+
+
+
+def process_testing_capture_AHC_ROAD(testing_capture_name, ground_truth_dbc_path, freq, window, offset, corr_matrices_training, signals_training, injection_interval):
+
+    corr_matrices_testing, timepts = compute_correlation_distribution_testing(testing_capture_name, ground_truth_dbc_path, freq, window, offset)
+    total_length = timepts[-1]
+    # print("corr_matrices_testing: ", len(corr_matrices_testing))
+
+    intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
+    # print(intervals_testing[0:10])
+    # print("interval_testing: ", len(intervals_testing))
+
+    ground_truth = []
+    predict_proba = [] 
+
+    for index_interval in range(len(intervals_testing)):
+
+        # print("Interval: ", intervals_testing[index_interval])
+
+        # print(np.isnan(corr_matrices_testing[index_interval]).any().any())
+        # print((corr_matrices_testing[index_interval] < 0).any().any())
+
+        # print("Interval: ", intervals_testing[index_interval])
+
+        # print(np.isnan(corr_matrices_testing[index_interval]).any().any())
+        # print((corr_matrices_testing[index_interval] < 0).any().any())
+
+        # Check if there are elements in the correlation matrix
+        if corr_matrices_testing[index_interval].shape != (0, 0):
+
+            signal_names_testing = corr_matrices_testing[index_interval].columns.values
+            # print(type(signal_names_testing), signal_names_testing)
+
+            signal_names_intersection = list(set(signals_training).intersection(set(signal_names_testing)))
+
+            linkage_matrix_training, linkage_matrix_testing = compute_hierarchical_clustering(corr_matrices_training, corr_matrices_testing[index_interval], signal_names_intersection, "ward")
+
+            similarity = 1 - compute_element_centric_similarity(linkage_matrix_training, linkage_matrix_testing, r=-5)
+            # print("similarity: ", similarity)
+
+            if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+                        or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                            or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+                ground_truth.append(1)
+                predict_proba.append(similarity)
+            else:
+                ground_truth.append(0)
+                predict_proba.append(similarity)
+
+        # Assign probability of detection 0 when there is an empty slice
+        else:
+            if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+                or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                    or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+                ground_truth.append(1)
+                predict_proba.append(0)
+            else:
+                ground_truth.append(0)
+                predict_proba.append(0)
+
+
+    return ground_truth, predict_proba
+
+
+
+def process_testing_captures_parallel_AHC_ROAD(testing_capture, ground_truth_dbc_path, attack_metadata, freq, method, dataset, corr_matrices_training, signals_training):
+
+    print("computing: ", testing_capture)
+    
+    # dict to store computations
+    resulting_dic = defaultdict(dict)
+
+    # extract injection intervals
+    injection_interval = attack_metadata[testing_capture[12:-14]]["injection_interval"]
+
+    # Windowing datasets
+    for window in tqdm(np.arange(50, 450, 50)):
+        for offset in np.arange(10, window + 10, 10):
+
+            ground_truth, predict_proba = process_testing_capture_AHC_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, 
+                                                                           corr_matrices_training, signals_training, injection_interval)
     
             resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
             resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
