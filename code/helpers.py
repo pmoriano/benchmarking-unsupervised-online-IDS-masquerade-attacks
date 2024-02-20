@@ -647,3 +647,53 @@ def process_testing_captures_parallel_AHC_ROAD(testing_capture, ground_truth_dbc
     # Storing the file
     with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
         json.dump(resulting_dic, outfile)
+
+
+def count_positive_windows(testing_capture_name, ground_truth_dbc_path, freq, window, offset, injection_interval):
+
+    _, timepts = compute_correlation_distribution_testing(testing_capture_name, ground_truth_dbc_path, freq, window, offset)
+    total_length = timepts[-1]
+    # print("corr_matrices_testing: ", len(corr_matrices_testing))
+
+    intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
+    # print(intervals_testing[0:10])
+    # print("interval_testing: ", len(intervals_testing))
+
+    counter = 0
+    positive_windows = 0
+
+    for index_interval in range(len(intervals_testing)):
+
+        # print("Interval: ", intervals_testing[index_interval])
+
+        counter += 1
+
+        if ((intervals_testing[index_interval][1] > injection_interval[0] and intervals_testing[index_interval][0] < injection_interval[0])
+                    or (intervals_testing[index_interval][0] > injection_interval[0] and intervals_testing[index_interval][1] < injection_interval[1])
+                        or (intervals_testing[index_interval][0] < injection_interval[1] and intervals_testing[index_interval][1] > injection_interval[1])):
+            positive_windows += 1
+
+    return positive_windows/counter                                                                   
+
+
+def count_positive_windows_parallel(testing_capture, ground_truth_dbc_path, freq, attack_metadata, dataset):
+
+    print("computing: ", testing_capture)
+    
+    # dict to store computations
+    resulting_dic = defaultdict(dict)
+
+    # extract injection intervals
+    injection_interval = attack_metadata[testing_capture[12:-14]]["injection_interval"]
+
+    # Windowing datasets
+    for window in tqdm(np.arange(50, 450, 50)):
+        for offset in np.arange(10, window + 10, 10):
+
+            positive_proportion = count_positive_windows(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
+    
+            resulting_dic[f"{window}-{offset}"]["positive_proportion"] = positive_proportion
+
+    # Storing the file
+    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_positive_proportion_{testing_capture[12:-14]}_{dataset}.json", "w") as outfile:
+        json.dump(resulting_dic, outfile)

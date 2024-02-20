@@ -17,12 +17,14 @@ def main():
 
     # print("Hola")
     training_captures, testing_captures = get_captures_names()
-    print(len(testing_captures), testing_captures, "\n")
+    # print(len(testing_captures), testing_captures, "\n")
+    # print(len(training_captures), training_captures, "\n")
+    # print(testing_captures)
     
     attack_metadata, attack_metadata_keys = get_metadata_info()
-    print(len(attack_metadata_keys), attack_metadata_keys, "\n")
+    # print(len(attack_metadata_keys), attack_metadata_keys, "\n")
 
-    # ground_truth_dbc_path = get_dbc_path()
+    ground_truth_dbc_path = get_dbc_path()
 
     # signal_multivar_ts, timepts, aid_signal_tups = from_capture_to_time_series(training_captures[-1], ground_truth_dbc_path, freq=100)
     # print(signal_multivar_ts.shape)
@@ -51,7 +53,7 @@ def main():
 
             print(window, offset)
 
-            ground_truth, predict_proba = process_testing_capture_correlation_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, 
+            ground_truth, predict_proba = process_testing_capture_distribution_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, 
                                                         offset, corr_sample_training, injection_interval)
     
             resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
