@@ -13,7 +13,7 @@ from scipy.stats import norm
 from scipy.cluster.hierarchy import single, complete, average, ward, dendrogram, linkage, fcluster
 from clusim.clustering import Clustering, remap2match
 import clusim.sim as sim
-
+import time
 
 
 sys.path.insert(0, "/home/cloud/Projects/CAN/detect/") # add detect folder to path so that files from this folder can be imported
@@ -208,10 +208,12 @@ def process_testing_capture_distribution_ROAD(testing_capture_name, ground_truth
 
     intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
     # print(intervals_testing[0:10])
-    # print("interval_testing: ", len(intervals_testing))
+    print("interval_testing: ", len(intervals_testing))
 
     ground_truth = []
     predict_proba = []
+
+    start = time.time()
 
     for index_interval in range(len(intervals_testing)):
         
@@ -241,7 +243,11 @@ def process_testing_capture_distribution_ROAD(testing_capture_name, ground_truth
             ground_truth.append(0)
             predict_proba.append(mannwhitneyu_test)
 
-    return ground_truth, predict_proba
+    end = time.time()
+
+    ttw = (end - start)/len(intervals_testing)
+
+    return ground_truth, predict_proba, ttw
 
 
     
@@ -260,14 +266,15 @@ def process_testing_captures_parallel_distribution_ROAD(testing_capture, ground_
     for window in tqdm(np.arange(50, 450, 50)):
         for offset in np.arange(10, window + 10, 10):
 
-            ground_truth, predict_proba = process_testing_capture_distribution_ROAD(testing_capture, ground_truth_dbc_path, freq, window, 
+            ground_truth, predict_proba, ttw = process_testing_capture_distribution_ROAD(testing_capture, ground_truth_dbc_path, freq, window, 
                                                         offset, corr_sample_training, injection_interval)
     
             resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
             resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+            resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
     # Storing the file
-    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+    with open(f"/home/cloud/ceph-robust/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
         json.dump(resulting_dic, outfile)
 
 
@@ -281,10 +288,12 @@ def process_testing_capture_correlation_ROAD(testing_capture_name, ground_truth_
 
     intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
     # print(intervals_testing[0:10])
-    # print("interval_testing: ", len(intervals_testing))
+    print("interval_testing: ", len(intervals_testing))
 
     ground_truth = []
     predict_proba = []
+
+    start = time.time()
 
     for index_interval in range(len(intervals_testing)):
         
@@ -329,7 +338,11 @@ def process_testing_capture_correlation_ROAD(testing_capture_name, ground_truth_
                 ground_truth.append(0)
                 predict_proba.append(spearman_test)
 
-    return ground_truth, predict_proba
+    end = time.time()
+
+    ttw = (end - start)/len(intervals_testing)
+
+    return ground_truth, predict_proba, ttw
 
 
 
@@ -348,14 +361,15 @@ def process_testing_captures_parallel_correlation_ROAD(testing_capture, ground_t
     for window in tqdm(np.arange(50, 450, 50)):
         for offset in np.arange(10, window + 10, 10):
 
-            ground_truth, predict_proba = process_testing_capture_correlation_ROAD(testing_capture, ground_truth_dbc_path, freq, window, 
+            ground_truth, predict_proba, ttw = process_testing_capture_correlation_ROAD(testing_capture, ground_truth_dbc_path, freq, window, 
                                                         offset, corr_matrices_training, signals_training, injection_interval)
     
             resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
             resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+            resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
     # Storing the file
-    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+    with open(f"/home/cloud/ceph-robust/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
         json.dump(resulting_dic, outfile)
 
 
@@ -390,10 +404,12 @@ def process_testing_capture_DBSCAN_ROAD(testing_capture_name, ground_truth_dbc_p
 
     intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
     # print(intervals_testing[0:10])
-    # print("interval_testing: ", len(intervals_testing))
+    print("interval_testing: ", len(intervals_testing))
 
     ground_truth = []
     predict_proba = [] 
+
+    start = time.time()
 
     for index_interval in range(len(intervals_testing)):
 
@@ -486,8 +502,11 @@ def process_testing_capture_DBSCAN_ROAD(testing_capture_name, ground_truth_dbc_p
                 ground_truth.append(0)
                 predict_proba.append(0)
 
+    end = time.time()
 
-    return ground_truth, predict_proba
+    ttw = (end - start)/len(intervals_testing)
+
+    return ground_truth, predict_proba, ttw
 
 
 
@@ -506,13 +525,14 @@ def process_testing_captures_parallel_DBSCAN_ROAD(testing_capture, ground_truth_
     for window in tqdm(np.arange(50, 450, 50)):
         for offset in np.arange(10, window + 10, 10):
 
-            ground_truth, predict_proba = process_testing_capture_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
+            ground_truth, predict_proba, ttw = process_testing_capture_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
     
             resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
             resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+            resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
     # Storing the file
-    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+    with open(f"/home/cloud/ceph-robust/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
         json.dump(resulting_dic, outfile)
 
 
@@ -569,10 +589,12 @@ def process_testing_capture_AHC_ROAD(testing_capture_name, ground_truth_dbc_path
 
     intervals_testing = create_time_intervals(total_length, window/freq, offset/freq)
     # print(intervals_testing[0:10])
-    # print("interval_testing: ", len(intervals_testing))
+    print("interval_testing: ", len(intervals_testing))
 
     ground_truth = []
     predict_proba = [] 
+
+    start = time.time()
 
     for index_interval in range(len(intervals_testing)):
 
@@ -619,8 +641,11 @@ def process_testing_capture_AHC_ROAD(testing_capture_name, ground_truth_dbc_path
                 ground_truth.append(0)
                 predict_proba.append(0)
 
+    end = time.time()
 
-    return ground_truth, predict_proba
+    ttw = (end - start)/len(intervals_testing)
+
+    return ground_truth, predict_proba, ttw
 
 
 
@@ -638,14 +663,15 @@ def process_testing_captures_parallel_AHC_ROAD(testing_capture, ground_truth_dbc
     for window in tqdm(np.arange(50, 450, 50)):
         for offset in np.arange(10, window + 10, 10):
 
-            ground_truth, predict_proba = process_testing_capture_AHC_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, 
+            ground_truth, predict_proba, ttw = process_testing_capture_AHC_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, 
                                                                            corr_matrices_training, signals_training, injection_interval)
     
             resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
             resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+            resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
     # Storing the file
-    with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
+    with open(f"/home/cloud/ceph-robust/CAN/signal-ids-benchmark/data/results_{testing_capture[12:-14]}_{method}_{dataset}.json", "w") as outfile:
         json.dump(resulting_dic, outfile)
 
 

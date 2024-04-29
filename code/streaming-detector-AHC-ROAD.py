@@ -17,7 +17,7 @@ def main():
 
     # print("Hola")
     training_captures, testing_captures = get_captures_names()
-    # print(len(testing_captures), testing_captures, "\n")
+    print(len(training_captures), training_captures, "\n")
     
     attack_metadata, attack_metadata_keys = get_metadata_info()
     # print(len(attack_metadata_keys), attack_metadata_keys, "\n")
@@ -54,11 +54,12 @@ def main():
 
     #         print(f"window:{window}, offset:{offset}")
 
-    #         ground_truth, predict_proba = process_testing_capture_AHC_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, 
+    #         ground_truth, predict_proba, ttw = process_testing_capture_AHC_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, 
     #                                                                        corr_matrices_training[0], signals_training, injection_interval)
     
     #         resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
     #         resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+    #         resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
     #         # break
 

@@ -53,10 +53,11 @@ def main():
 
     #         print(f"window:{window}, offset:{offset}")
 
-    #         ground_truth, predict_proba = process_testing_capture_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
+    #         ground_truth, predict_proba, ttw = process_testing_capture_DBSCAN_ROAD(testing_capture, ground_truth_dbc_path, freq, window, offset, injection_interval)
     
     #         resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
     #         resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+    #         resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
     #         # break
 

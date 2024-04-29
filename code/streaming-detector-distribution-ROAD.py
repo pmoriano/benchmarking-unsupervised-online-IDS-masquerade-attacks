@@ -41,48 +41,49 @@ def main():
 
     ############################################
 
-    window = 450
-    offset = 10
+    # window = 450
+    # offset = 10
 
-    resulting_dic = defaultdict(dict)
-    injection_interval = attack_metadata[testing_captures[2][12:-14]]["injection_interval"]
-    freq = 100
+    # resulting_dic = defaultdict(dict)
+    # injection_interval = attack_metadata[testing_captures[2][12:-14]]["injection_interval"]
+    # freq = 100
 
-    for window in tqdm(np.arange(50, 550, 50)):
-        for offset in np.arange(10, window + 10, 10):
+    # for window in tqdm(np.arange(50, 550, 50)):
+    #     for offset in np.arange(10, window + 10, 10):
 
-            print(window, offset)
+    #         print(window, offset)
 
-            ground_truth, predict_proba = process_testing_capture_distribution_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, 
-                                                        offset, corr_sample_training, injection_interval)
+    #         ground_truth, predict_proba, ttw = process_testing_capture_distribution_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, 
+    #                                                     offset, corr_sample_training, injection_interval)
     
-            resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
-            resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+    #         resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+    #         resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+    #         resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
-    # print(ground_truth) 
-    # print(predict_proba)
+    # # print(ground_truth) 
+    # # print(predict_proba)
 
-    print(dict(resulting_dic))
+    # print(dict(resulting_dic))
 
     # with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_captures[0][12:-14]}_distribution_ROAD.json", "w") as outfile:
     #     json.dump(resulting_dic, outfile)
 
     ###
 
-    # jobs = []
-    # freq = 100
+    jobs = []
+    freq = 100
 
-    # for testing_capture in testing_captures:
+    for testing_capture in testing_captures:
 
-    #     p = Process(target=process_testing_captures_parallel_distribution_ROAD, args=(testing_capture, ground_truth_dbc_path, 
-    #                                                                                  attack_metadata, freq, corr_sample_training, method, dataset))
+        p = Process(target=process_testing_captures_parallel_distribution_ROAD, args=(testing_capture, ground_truth_dbc_path, 
+                                                                                     attack_metadata, freq, corr_sample_training, method, dataset))
         
-    #     jobs.append(p)
-    #     p.start()
+        jobs.append(p)
+        p.start()
 
-    # # Wait for this [thread/process] to complete
-    # for proc in jobs:
-    #     proc.join()
+    # Wait for this [thread/process] to complete
+    for proc in jobs:
+        proc.join()
 
     
 
