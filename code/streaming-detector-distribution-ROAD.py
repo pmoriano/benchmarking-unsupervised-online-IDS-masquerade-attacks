@@ -39,36 +39,36 @@ def main():
     #print(len(corr_sample_training))
     #display(corr_sample_training)
 
-    ############################################
+    # ############################################
 
-    # window = 450
-    # offset = 10
+    # # window = 450
+    # # offset = 10
 
-    # resulting_dic = defaultdict(dict)
-    # injection_interval = attack_metadata[testing_captures[2][12:-14]]["injection_interval"]
-    # freq = 100
+    # # resulting_dic = defaultdict(dict)
+    # # injection_interval = attack_metadata[testing_captures[2][12:-14]]["injection_interval"]
+    # # freq = 100
 
-    # for window in tqdm(np.arange(50, 550, 50)):
-    #     for offset in np.arange(10, window + 10, 10):
+    # # for window in tqdm(np.arange(50, 550, 50)):
+    # #     for offset in np.arange(10, window + 10, 10):
 
-    #         print(window, offset)
+    # #         print(window, offset)
 
-    #         ground_truth, predict_proba, ttw = process_testing_capture_distribution_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, 
-    #                                                     offset, corr_sample_training, injection_interval)
+    # #         ground_truth, predict_proba, ttw = process_testing_capture_distribution_ROAD(testing_captures[2], ground_truth_dbc_path, freq, window, 
+    # #                                                     offset, corr_sample_training, injection_interval)
     
-    #         resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
-    #         resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
-    #         resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
+    # #         resulting_dic[f"{window}-{offset}"]["ground_truth"] = ground_truth
+    # #         resulting_dic[f"{window}-{offset}"]["predict_proba"] = predict_proba
+    # #         resulting_dic[f"{window}-{offset}"]["ttw"] = ttw
 
-    # # print(ground_truth) 
-    # # print(predict_proba)
+    # # # print(ground_truth) 
+    # # # print(predict_proba)
 
-    # print(dict(resulting_dic))
+    # # print(dict(resulting_dic))
 
-    # with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_captures[0][12:-14]}_distribution_ROAD.json", "w") as outfile:
-    #     json.dump(resulting_dic, outfile)
+    # # with open(f"/home/cloud/Projects/CAN/signal-ids-benchmark/data/results_{testing_captures[0][12:-14]}_distribution_ROAD.json", "w") as outfile:
+    # #     json.dump(resulting_dic, outfile)
 
-    ###
+    # ###
 
     jobs = []
     freq = 100
