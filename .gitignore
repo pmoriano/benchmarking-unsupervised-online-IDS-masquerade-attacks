@@ -1,9 +1,9 @@
 # ignore data folder/
 data*
 
-
 # images
 #*.pdf
 #*.eps
 
+.DS_Store
 
