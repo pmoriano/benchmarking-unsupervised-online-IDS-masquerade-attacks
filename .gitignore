@@ -1,9 +1,10 @@
-# ignore data folder/
+# Ignore data folder/
 data*
 
-# images
+# Images
 #*.pdf
-#*.eps
 
+# OS Generated files
 .DS_Store
-
+.DS_Store?
+**/.DS_Store
