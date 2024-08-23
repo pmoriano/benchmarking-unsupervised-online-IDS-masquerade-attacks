@@ -2,7 +2,7 @@
 
 This repository provides the Python code to reproduce the results of our paper [Benchmarking Unsupervised Online IDS for Masquerade Attacks in CAN (arXiv:2406.13778 [cs.CR])](https://arxiv.org/abs/2406.13778). In this paper, we introduce a benchmark study of four different non-deep learning (DL)-based unsupervised online intrusion detection systems (IDS) for masquerade attacks in CAN. Our approach differs from existing benchmarks in that we analyze the effect of controlling streaming data conditions in a sliding window setting. We show that although benchmarked IDS are not effective at detecting every attack type, the method that relies on detecting changes at the hierarchical structure of clusters of time series produces the best results at the expense of higher computational overhead.
 
-![Benchmark Workflow](figs/benchmark-workflow.jpg)
+![Benchmark Workflow](figs/design-diagram.jpg)
 
 ## Install Miniconda
 
