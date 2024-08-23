@@ -3,7 +3,7 @@ data*
 
 
 # images
-*.pdf
-*.eps
+#*.pdf
+#*.eps
 
 
